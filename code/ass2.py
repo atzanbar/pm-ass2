@@ -6,13 +6,18 @@ import numpy as np
 
 from utils import read_data_lines
 
-def linston(s, freq, lam , x):
+
+def linston(freq,s, lam , x):
     return (freq + lam) / (s + lam *x)
 
-def prep(corpus,smooth_f,  s,words_stat,lam, x):
+
+def head_out(freq,Ph):
+    return Ph[freq]
+
+def prep(corpus,words_stat,smooth_f,  *args):
     pr=0
     for w in corpus:
-        pr+= np.log(smooth_f(s,words_stat[w],lam,x))
+        pr+= np.log(smooth_f(words_stat[w],*args))
     return 2**((-1.0/len(corpus))*pr)
 
 
@@ -54,18 +59,18 @@ def main(args):
     output[11]  = freq_word / len(train)
     freq_unseen = 0
     output[12]  = freq_unseen
-    output[13] = linston(train_size,freq_word,0.1,train_voc_size)
-    output[14] = linston(train_size,freq_unseen,0.1,train_voc_size)
-    output[15] = prep(validation,linston,train_size,count_T,0.01,train_voc_size)
-    output[16] = prep(validation,linston,train_size,count_T,0.10,train_voc_size)
-    output[17] = prep(validation,linston,train_size,count_T,1.00,train_voc_size)
+    output[13] = linston(freq_word,train_size,0.1,train_voc_size)
+    output[14] = linston(freq_unseen,train_size,0.1,train_voc_size)
+    output[15] = prep(validation,count_T,linston,train_size,0.01,train_voc_size)
+    output[16] = prep(validation,count_T,linston,train_size,0.10,train_voc_size)
+    output[17] = prep(validation,count_T,linston,train_size,1.00,train_voc_size)
     # minimize lamda
     pr=[];
-    # lam = [l/1000.0 for l in xrange(1, 1000,20)]
-    # for l in lam:
-    #    pr.append( prep(validation,linston,train_size,dev_words_stats,l,train_voc_size))
-    # output[18]= lam[np.argmin(pr)]
-    # output[19] = np.min(pr)
+    lam = [l/1000.0 for l in xrange(1, 1000,20)]
+    for l in lam:
+       pr.append( prep(validation,count_T,linston,train_size,l,train_voc_size))
+    output[18]= lam[np.argmin(pr)]
+    output[19] = np.min(pr)
 
     #Held on
     train = DEV[0:int(math.ceil(dev_len*0.5))]
@@ -107,9 +112,11 @@ def main(args):
 
     #test test
     TEST =read_data_lines(args[2]);
+    count_Test = defaultdict(int)
     test_len = len(TEST)
     output[24] = test_len
-
+    print(prep(TEST,count_T,linston,train_size,1.00,train_voc_size))
+    print(prep(TEST,count_T,head_out,Ph))
     print ("\n".join("output %s: %s " % (i+1,o) for i,o in enumerate(output)))
 
 
